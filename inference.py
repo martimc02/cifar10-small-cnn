@@ -2,7 +2,7 @@ import torch
 from PIL import Image
 import torchvision.transforms as transforms
 
-from model import SmallCNN
+from model import CNN
 
 
 classes = (
@@ -14,7 +14,7 @@ classes = (
 def load_model(weights_path="weights/cifar10_small_cnn.pth"):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = SmallCNN().to(device)
+    model = CNN().to(device)
     model.load_state_dict(torch.load(weights_path, map_location=device))
     model.eval()
 
