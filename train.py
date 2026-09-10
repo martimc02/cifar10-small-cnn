@@ -6,7 +6,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
-from model import SmallCNN
+from model import CNN
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -25,7 +25,7 @@ trainset = torchvision.datasets.CIFAR10(
 
 trainloader = DataLoader(trainset, batch_size=4, shuffle=True, num_workers=0)
 
-model = SmallCNN().to(device)
+model = CNN().to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
