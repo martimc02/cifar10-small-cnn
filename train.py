@@ -1,86 +1,57 @@
-from pathlib import Path
-
+import os
 import torch
-from torch import nn, optim
+import torch.nn as nn
+import torch.optim as optim
+import torchvision
+import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
 
 from model import SmallCNN
 
 
-BATCH_SIZE = 4
-EPOCHS = 2
-LEARNING_RATE = 0.001
-MOMENTUM = 0.9
-WEIGHTS_PATH = Path("weights/cifar10_small_cnn.pth")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+])
 
-def get_device() -> torch.device:
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+trainset = torchvision.datasets.CIFAR10(
+    root="./data",
+    train=True,
+    download=True,
+    transform=transform
+)
 
+trainloader = DataLoader(trainset, batch_size=4, shuffle=True, num_workers=2)
 
-def get_transform() -> transforms.Compose:
-    return transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        ]
-    )
+model = SmallCNN().to(device)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
+for epoch in range(2):
+    running_loss = 0.0
 
-def train() -> SmallCNN:
-    torch.manual_seed(0)
-    device = get_device()
-    print(f"Using device: {device}")
+    for i, data in enumerate(trainloader, 0):
+        inputs, labels = data
+        inputs = inputs.to(device)
+        labels = labels.to(device)
 
-    trainset = datasets.CIFAR10(
-        root="./data",
-        train=True,
-        download=True,
-        transform=get_transform(),
-    )
-    trainloader = DataLoader(
-        trainset,
-        batch_size=BATCH_SIZE,
-        shuffle=True,
-        num_workers=2,
-    )
+        optimizer.zero_grad()
 
-    model = SmallCNN().to(device)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(
-        model.parameters(),
-        lr=LEARNING_RATE,
-        momentum=MOMENTUM,
-    )
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
 
-    model.train()
-    for epoch in range(EPOCHS):
-        running_loss = 0.0
+        running_loss += loss.item()
 
-        for batch_index, (inputs, labels) in enumerate(trainloader, start=1):
-            inputs = inputs.to(device)
-            labels = labels.to(device)
+        if i % 2000 == 1999:
+            print(f"[{epoch + 1}, {i + 1}] loss: {running_loss / 2000:.3f}")
+            running_loss = 0.0
 
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+print("Finished Training")
 
-            running_loss += loss.item()
-            if batch_index % 2000 == 0:
-                print(
-                    f"Epoch {epoch + 1}, batch {batch_index}: "
-                    f"loss = {running_loss / 2000:.3f}"
-                )
-                running_loss = 0.0
-
-    WEIGHTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(model.state_dict(), WEIGHTS_PATH)
-    print(f"Finished training. Weights saved to {WEIGHTS_PATH}")
-    return model
-
-
-if __name__ == "__main__":
-    train()
+os.makedirs("weights", exist_ok=True)
+torch.save(model.state_dict(), "weights/cifar10_small_cnn.pth")
+print("Weights saved")
