@@ -23,7 +23,7 @@ trainset = torchvision.datasets.CIFAR10(
     transform=transform
 )
 
-trainloader = DataLoader(trainset, batch_size=4, shuffle=True, num_workers=2)
+trainloader = DataLoader(trainset, batch_size=4, shuffle=True, num_workers=0)
 
 model = SmallCNN().to(device)
 criterion = nn.CrossEntropyLoss()
