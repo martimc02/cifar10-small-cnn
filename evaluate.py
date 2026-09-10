@@ -1,46 +1,43 @@
 import torch
+import torchvision
+import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from torchvision import datasets
 
-from inference import get_transform, load_model
-
-
-BATCH_SIZE = 128
+from model import SmallCNN
 
 
-def evaluate(weights_path: str = "weights/cifar10_small_cnn.pth") -> float:
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = load_model(weights_path, device=device)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    testset = datasets.CIFAR10(
-        root="./data",
-        train=False,
-        download=True,
-        transform=get_transform(),
-    )
-    testloader = DataLoader(
-        testset,
-        batch_size=BATCH_SIZE,
-        shuffle=False,
-        num_workers=2,
-    )
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+])
 
-    correct = 0
-    total = 0
+testset = torchvision.datasets.CIFAR10(
+    root="./data",
+    train=False,
+    download=True,
+    transform=transform
+)
 
-    with torch.no_grad():
-        for images, labels in testloader:
-            images = images.to(device)
-            labels = labels.to(device)
-            outputs = model(images)
-            predictions = outputs.argmax(dim=1)
-            total += labels.size(0)
-            correct += (predictions == labels).sum().item()
+testloader = DataLoader(testset, batch_size=4, shuffle=False, num_workers=0)
 
-    accuracy = 100.0 * correct / total
-    print(f"Test accuracy: {accuracy:.2f}%")
-    return accuracy
+model = SmallCNN().to(device)
+model.load_state_dict(torch.load("weights/cifar10_small_cnn.pth", map_location=device))
+model.eval()
 
+correct = 0
+total = 0
 
-if __name__ == "__main__":
-    evaluate()
+with torch.no_grad():
+    for images, labels in testloader:
+        images = images.to(device)
+        labels = labels.to(device)
+
+        outputs = model(images)
+        _, predicted = torch.max(outputs, 1)
+
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+
+print(f"Accuracy on test images: {100 * correct / total:.2f}%")
