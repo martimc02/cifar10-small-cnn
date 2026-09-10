@@ -3,7 +3,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
-from model import SmallCNN
+from model import CNN
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -22,7 +22,7 @@ testset = torchvision.datasets.CIFAR10(
 
 testloader = DataLoader(testset, batch_size=4, shuffle=False, num_workers=0)
 
-model = SmallCNN().to(device)
+model = CNN().to(device)
 model.load_state_dict(torch.load("weights/cifar10_small_cnn.pth", map_location=device))
 model.eval()
 
